@@ -11,6 +11,8 @@ import ExcelJS from "exceljs";
 import { getDaysInFebruary } from "../Utils/helpers";
 import { DAYS_IN_MONTH } from "../constants";
 import moment from "moment";
+import path from "path";
+import * as fs from 'fs';
 
 interface AttendanceLog {
     tanggal: string;
@@ -106,15 +108,30 @@ export default class AttendanceService {
             sheet.addRow([log.tanggal, log.jamMasuk, log.jamKeluar]);
         }
 
+        const FILE_NAME = `${queryParams.nik}_${queryParams.bulan}_${queryParams.tahun}_attendance`;
+        const FILE_EXTENSION = "xlsx";
+
+        // save the file to local directory
+        // Define the file path and name
+        const directoryPath = path.join(__dirname, "..", "..", "public", "xlsx");
+        // Check if the directory exists, if not, create it
+        if (!fs.existsSync(directoryPath)) {
+            fs.mkdirSync(directoryPath, { recursive: true });
+        }
+        const filePath = path.join(directoryPath, `${FILE_NAME}.${FILE_EXTENSION}`);
+
+        // Save the workbook to the specified file path
+        await book.xlsx.writeFile(filePath);
+
+        // send the workbook
         // Set content type and disposition including filename
         res.setHeader(
             "Content-Type",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         );
-        const FILE_NAME = `${queryParams.nik}_${queryParams.bulan}_${queryParams.tahun}_attendance`;
         res.setHeader(
             "Content-Disposition",
-            "attachment; filename=" + `${FILE_NAME}.xlsx`
+            "attachment; filename=" + `${FILE_NAME}.${FILE_EXTENSION}`
         );
 
         // Send the workbook as a buffer
