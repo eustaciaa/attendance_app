@@ -13,6 +13,13 @@ import PGDB from "./Database/PGDB";
 import { ModelDB } from "./ModelDB/ModelDB";
 import DataSource from "./DataSource/DataSource";
 import { SERVER_CONFIG } from "./constants";
+import { TypedRequestQuery } from "./Model/TypedRequestQuery";
+import { EmployeeMonthlyAttendanceParsedQs, constructEmployeeMonthlyAttendanceQs } from "./Model/RawAttendance";
+import moment from "moment";
+import { validateEmployeeMonthlyAttendanceQs } from "./Schema/RawAttendanceSchema";
+import { BadRequestError, CustomError, constructedErrorResponse } from "./Model/Error";
+
+moment.locale("id");
 
 const startServer = async () => {
     await setUpEnv();
@@ -34,14 +41,17 @@ const startServer = async () => {
     const dataSource = new DataSource({ modelDB });
 
     // Routes
-    app.get("/getEmployeeMonthlyAttendance", async (req, res) => {
+    app.get("/getEmployeeMonthlyAttendance", async (req: TypedRequestQuery<EmployeeMonthlyAttendanceParsedQs>, res) => {
         try {
+            if (!validateEmployeeMonthlyAttendanceQs(req.query)) throw new BadRequestError("Invalid request");
+            const queryParams = constructEmployeeMonthlyAttendanceQs(req.query);
+            
             const allData = await dataSource.RawAttendanceDataSource.getAll();
-            console.log("🚀 ~ app.get ~ allData:", allData);
+            await dataSource.RawAttendanceDataSource.getEmployeeMonthlyAttendance(queryParams);
             res.json(allData);
         } catch (error) {
             console.error("Error:", error);
-            res.status(500).json({ error: "Internal server error" });
+            constructedErrorResponse(error, res);
         }
     });
 
