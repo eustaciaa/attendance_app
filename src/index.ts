@@ -11,20 +11,20 @@ import express from "express";
 import cors from "cors";
 import PGDB from "./Database/PGDB";
 import { ModelDB } from "./ModelDB/ModelDB";
-import DataSource from "./DataSource/DataSource";
+import DataSources from "./DataSource/DataSources";
 import { SERVER_CONFIG } from "./constants";
 import { TypedRequestQuery } from "./Model/TypedRequestQuery";
-import { EmployeeMonthlyAttendanceParsedQs, constructEmployeeMonthlyAttendanceQs } from "./Model/RawAttendance";
+import { EmployeeMonthlyAttendanceParsedQs } from "./Model/RawAttendance";
 import moment from "moment";
-import { validateEmployeeMonthlyAttendanceQs } from "./Schema/RawAttendanceSchema";
-import { BadRequestError, CustomError, constructedErrorResponse } from "./Model/Error";
+import { constructedErrorResponse } from "./Model/Error";
+import Services from "./Services/Services";
 
 moment.locale("id");
 
 const startServer = async () => {
     await setUpEnv();
 
-    // Init express app
+    // init express app
     const app = express();
     app.use(express.json());
     app.use(
@@ -34,26 +34,33 @@ const startServer = async () => {
         })
     );
 
-    // Set up database
+    // set up database
     const postgresDB = new PGDB();
     await postgresDB.authenticate();
+
+    // set up middlewares
     const modelDB = new ModelDB(postgresDB);
-    const dataSource = new DataSource({ modelDB });
+    const dataSources = new DataSources({ modelDB });
+    const services = new Services(dataSources);
 
     // Routes
-    app.get("/getEmployeeMonthlyAttendance", async (req: TypedRequestQuery<EmployeeMonthlyAttendanceParsedQs>, res) => {
-        try {
-            if (!validateEmployeeMonthlyAttendanceQs(req.query)) throw new BadRequestError("Invalid request");
-            const queryParams = constructEmployeeMonthlyAttendanceQs(req.query);
-            
-            const allData = await dataSource.RawAttendanceDataSource.getAll();
-            await dataSource.RawAttendanceDataSource.getEmployeeMonthlyAttendance(queryParams);
-            res.json(allData);
-        } catch (error) {
-            console.error("Error:", error);
-            constructedErrorResponse(error, res);
+    app.get(
+        "/download/xls/employeeMonthlyAttendance",
+        async (
+            req: TypedRequestQuery<EmployeeMonthlyAttendanceParsedQs>,
+            res
+        ) => {
+            try {
+                await services.attendanceService.downloadEmployeeMonthlyAttendance(
+                    req.query,
+                    res
+                );
+            } catch (error) {
+                console.error("Error:", error);
+                constructedErrorResponse(error, res);
+            }
         }
-    });
+    );
 
     // Start the server
     app.listen(SERVER_CONFIG.port, () => {

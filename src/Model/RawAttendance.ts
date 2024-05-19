@@ -20,16 +20,27 @@ export type EmployeeMonthlyAttendanceParsedQs = {
 export function constructEmployeeMonthlyAttendanceQs(
     parsedQs: EmployeeMonthlyAttendanceParsedQs
 ): EmployeeMonthlyAttendancedQs {
+    const bulan = parseInt(parsedQs.bulan);
+    const tahun = parseInt(parsedQs.tahun);
+
+    const dateParamMoment = moment(`${tahun}-${bulan}`, "YYYY-M", true);
+    if (
+        !dateParamMoment.isValid() ||
+        dateParamMoment.isAfter(moment(), "month")
+    )
+        throw new BadRequestError(`Unexpected value of bulan or tahun`);
+
     const constructedQs: EmployeeMonthlyAttendancedQs = {
         nik: parsedQs.nik,
-        bulan: parseInt(parsedQs.bulan),
-        tahun: parseInt(parsedQs.tahun),
+        bulan: bulan,
+        tahun: tahun,
     };
 
-    if (constructedQs.bulan < 1 && constructedQs.bulan > 12)
-        throw new BadRequestError(`Unexpected value of bulan`);
-    if (constructedQs.tahun > moment().year())
-        throw new BadRequestError(`Unexpected value of tahun`);
-
     return constructedQs;
+}
+
+export interface Attendance {
+    day: number;
+    earliest_time: number;
+    latest_time: number;
 }

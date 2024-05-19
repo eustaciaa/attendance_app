@@ -2,7 +2,7 @@ import { DataTypes, Model, Sequelize } from "sequelize";
 import { RawAttendance } from "../Model/RawAttendance";
 
 export function RawAttendanceTable(seq: Sequelize) {
-    const model = seq.define<Model<RawAttendance, RawAttendance>>(
+    const model = seq.define<Model<RawAttendance, Partial<RawAttendance>>>(
         "RawAttendance",
         {
             id: {
